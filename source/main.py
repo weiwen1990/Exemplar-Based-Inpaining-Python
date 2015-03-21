@@ -7,10 +7,10 @@ from Inpainter import Inpainter
 
 if __name__ == "__main__":
     """
-    Usage: main.py pathOfInputImage pathOfMaskImage [,halfPatchWidth=4].
+    Usage: python main.py pathOfInputImage pathOfMaskImage [,halfPatchWidth=4].
     """
     if not len(sys.argv) == 3 and not len(sys.argv) == 4:
-        print 'Usage: main.py pathOfInputImage pathOfMaskImage [,halfPatchWidth].'
+        print 'Usage: python main.py pathOfInputImage pathOfMaskImage [,halfPatchWidth].'
         exit(-1)
     
     if len(sys.argv) == 3:

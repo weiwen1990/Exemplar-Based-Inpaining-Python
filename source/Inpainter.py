@@ -51,67 +51,47 @@ class Inpainter():
         self.halfPatchWidth = halfPatchWidth
 
     def checkValidInputs(self):
-        if not self.inputImage.dtype == np.uint8: # TODO: CV_8UC3
+        if not self.inputImage.dtype == np.uint8: # CV_8UC3
             return self.ERROR_INPUT_MAT_INVALID_TYPE
-        if not self.mask.dtype == np.uint8: # TODO: CV_8UC1
+        if not self.mask.dtype == np.uint8: # CV_8UC1
             return self.ERROR_INPUT_MASK_INVALID_TYPE
-        if not self.mask.shape == self.inputImage.shape[:2]: # TODO: CV_ARE_SIZES_EQ
+        if not self.mask.shape == self.inputImage.shape[:2]: # CV_ARE_SIZES_EQ
             return self.ERROR_MASK_INPUT_SIZE_MISMATCH
         if self.halfPatchWidth == 0:
             return self.ERROR_HALF_PATCH_WIDTH_ZERO
         return self.CHECK_VALID
     
     def inpaint(self):
-#        print 'initialize mats'
         self.initializeMats()
-#        print 'calculate gradients'
         self.calculateGradients()
         stay = True
         
         while stay:
-#            print 'compute fillFront'
             self.computeFillFront()
-#            print 'compute confidence'
             self.computeConfidence()
-#            print 'compute data'
             self.computeData()
-#            print 'compute target'
             self.computeTarget()
-            print 'compute bestpatch', time.asctime()
+            #print 'Computing bestpatch', time.asctime()
             self.computeBestPatch()
-#            print 'update mats', time.asctime()
             self.updateMats()
             stay = self.checkEnd()
 
-            #cv2.imshow("updatedMask", self.updatedMask)
             cv2.imwrite("../tests/updatedMask.jpg", self.updatedMask)
-            #cv2.imshow("inpaint", self.workImage)
             cv2.imwrite("../tests/workImage.jpg", self.workImage)
-            #cv2.imshow("gradientX", self.gradientX)
-            #cv2.imshow("gradientY", self.gradientY)
-            #cv2.waitKey(2);
-            print 'One loop Over.'
         
         self.result = np.copy(self.workImage)
-        cv2.namedWindow("confidence")
-        cv2.imshow("confidence", self.confidence)
+        cv2.imshow("Confidence", self.confidence)
     
     def initializeMats(self):
         _, self.confidence = cv2.threshold(self.mask, 10, 255, cv2.THRESH_BINARY)
         _, self.confidence = cv2.threshold(self.confidence, 2, 1, cv2.THRESH_BINARY_INV)
         
         self.sourceRegion = np.copy(self.confidence)
-        self.sourceRegion = np.uint8(self.sourceRegion) #dtype = np.uint8
+        self.sourceRegion = np.uint8(self.sourceRegion) # dtype = np.uint8
         self.originalSourceRegion = np.copy(self.sourceRegion)
         
         self.confidence = np.float32(self.confidence)
  
-#        height, width = self.confidence.shape[:2]
-#        for y in range(height):
-#            for x in range(width):
-#                if not (self.confidence[y, x] == float(1)) and not (self.confidence[y, x] == float(0)):
-#                    print y, x, ':', self.confidence[y, x]
-#        print 'Checked???'
         _, self.targetRegion = cv2.threshold(self.mask, 10, 255, cv2.THRESH_BINARY)
         _, self.targetRegion = cv2.threshold(self.targetRegion, 2, 1, cv2.THRESH_BINARY)
         self.targetRegion = np.uint8(self.targetRegion)
@@ -125,7 +105,7 @@ class Inpainter():
         self.NORMAL_KERNELY = cv2.transpose(self.NORMAL_KERNELX)
 
     def calculateGradients(self):
-        srcGray = cv2.cvtColor(self.workImage, cv2.COLOR_RGB2GRAY) # TODO: CV_BGR2GRAY
+        srcGray = cv2.cvtColor(self.workImage, cv2.COLOR_RGB2GRAY) # TODO: check type CV_BGR2GRAY
         
         self.gradientX = cv2.Scharr(srcGray, cv2.CV_32F, 1, 0) # default parameter: scale shoule be 1
         self.gradientX = cv2.convertScaleAbs(self.gradientX)
@@ -134,36 +114,30 @@ class Inpainter():
         self.gradientY = cv2.convertScaleAbs(self.gradientY)
         self.gradientY = np.float32(self.gradientY)
     
-#        gx = np.copy(self.workImage)
-#        gy = np.copy(self.workImage)
         height, width = self.sourceRegion.shape
         for y in range(height):
             for x in range(width):
                 if self.sourceRegion[y, x] == 0:
                     self.gradientX[y, x] = 0
                     self.gradientY[y, x] = 0
-#                gx[y, x] = [self.gradientX[y, x]]*3
-#                gy[y, x] = [self.gradientY[y, x]]*3
-#        
-#        cv2.imwrite("../tests/gx.jpg", gx)
-#        cv2.imwrite("../tests/gy.jpg", gy)
+        
         self.gradientX /= 255
         self.gradientY /= 255
     
     def computeFillFront(self):
         # elements of boundryMat, whose value > 0 are neighbour pixels of target region. 
         boundryMat = cv2.filter2D(self.targetRegion, cv2.CV_32F, self.LAPLACIAN_KERNEL)
-        #print boundryMat.tolist()
+
         sourceGradientX = cv2.filter2D(self.sourceRegion, cv2.CV_32F, self.NORMAL_KERNELX)
         sourceGradientY = cv2.filter2D(self.sourceRegion, cv2.CV_32F, self.NORMAL_KERNELY)
-        #print sourceGradientY.tolist()
+        
         del self.fillFront[:]
         del self.normals[:]
         height, width = boundryMat.shape[:2]
         for y in range(height):
             for x in range(width):
                 if boundryMat[y, x] > 0:
-                    self.fillFront.append((x, y)) # TODO: reCheck: x before y
+                    self.fillFront.append((x, y))
                     dx = sourceGradientX[y, x]
                     dy = sourceGradientY[y, x]
                     
@@ -173,6 +147,7 @@ class Inpainter():
                         normalX /= tempF
                         normalY /= tempF
                     self.normals.append((normalX, normalY))
+    
     
     def getPatch(self, point):
         centerX, centerY = point
@@ -194,11 +169,7 @@ class Inpainter():
                 for x in range(aX, bX + 1):
                     if self.targetRegion[y, x] == 0:
                         total += self.confidence[y, x]
-#                        if not self.confidence[y, x] == float(1):
-#                            print y, x, ':', self.confidence[y, x]
             self.confidence[pY, pX] = total / ((bX-aX+1) * (bY-aY+1))
-#            print 'total', total
-#            print pY, pX, 'confidence set to:', self.confidence[pY, pX]
     
     def computeData(self):
         for i in range(len(self.fillFront)):
@@ -231,25 +202,24 @@ class Inpainter():
         workImage = self.workImage.tolist()
         
         if pHeight != self.patchHeight or pWidth != self.patchWidth:
-            # TODO: Gernerate a list, whose elements means that the patch with this element as UpperLeft is usable.
             print 'patch size changed.'
             self.patchHeight, self.patchWidth = pHeight, pWidth
             area = pHeight * pWidth
             SUM_KERNEL = np.ones((pHeight, pWidth), dtype = np.uint8)
             convolvedMat = cv2.filter2D(self.originalSourceRegion, cv2.CV_8U, SUM_KERNEL, anchor = (0, 0))
             self.sourcePatchULList = []
+            
+            # sourcePatchULList: list whose elements is possible to be the UpperLeft of an patch to reference.
             for y in range(height - pHeight):
                 for x in range(width - pWidth):
                     if convolvedMat[y, x] == area:
                         self.sourcePatchULList.append((y, x))
-#                        print y, x, 'added.'
-    #        print self.originalSourceRegion
-    #        print SUM_KERNEL
-    #        print convolvedMat.tolist()
 
         countedNum = 0
         self.targetPatchSList = []
         self.targetPatchTList = []
+        
+        # targetPatchSList & targetPatchTList: list whose elements are the coordinates of  origin/toInpaint pixels.
         for i in range(pHeight):
             for j in range(pWidth):
                 if self.sourceRegion[aY+i, aX+j] == 1:
@@ -259,24 +229,12 @@ class Inpainter():
                     self.targetPatchTList.append((i, j))
                     
         
-#        for y in range(height - pHeight):
-#            for x in range(width - pWidth):
         for (y, x) in self.sourcePatchULList:
                 patchError = 0
                 meanR = meanG = meanB = 0
                 skipPatch = False
                 
-#                for i in range(pHeight):
-#                    for j in range(pWidth):
                 for (i, j) in self.targetPatchSList:
-#                        if self.originalSourceRegion[y+i, x+j] == 0:
-#                            skipPatch = True
-#                            print 'really?'
-#                            break
-#                        if self.sourceRegion[aY+i, aX+j] == 0:
-#                            continue
-#                        sourcePixel = self.workImage[y+i, x+j]
-#                        targetPixel = self.workImage[aY+i, aX+j]
                         sourcePixel = workImage[y+i][x+j]
                         targetPixel = workImage[aY+i][aX+j]
                         
@@ -286,9 +244,6 @@ class Inpainter():
                         meanR += sourcePixel[0]
                         meanG += sourcePixel[1]
                         meanB += sourcePixel[2]
-                    
-#                    if skipPatch: break
-#                if skipPatch: continue
                 
                 countedNum = float(countedNum)
                 patchError /= countedNum
@@ -296,13 +251,11 @@ class Inpainter():
                 meanG /= countedNum
                 meanB /= countedNum
                 
-                if patchError <= minError:
+                alpha, beta = 0.9, 0.5
+                if alpha * patchError <= minError:
                     patchVariance = 0
-#                    for i in range(pHeight):
-#                        for j in range(pWidth):
-#                            if self.sourceRegion[aY+i, aX+j] == 0:
+                    
                     for (i, j) in self.targetPatchTList:
-#                                sourcePixel = self.workImage[y+i, x+j]
                                 sourcePixel = workImage[y+i][x+j]
                                 difference = sourcePixel[0] - meanR
                                 patchVariance += math.pow(difference, 2)
@@ -311,7 +264,10 @@ class Inpainter():
                                 difference = sourcePixel[2] - meanB
                                 patchVariance += math.pow(difference, 2)
                     
-                    if patchError < minError or patchVariance < bestPatchVariance:
+                    # Use alpha & Beta to encourage path with less patch variance.
+                    # For situations in which you need little variance.
+                    # Alpha = Beta = 1 to disable.
+                    if patchError < alpha * minError or patchVariance < beta * bestPatchVariance:
                         bestPatchVariance = patchVariance
                         minError = patchError
                         self.bestMatchUpperLeft = (x, y)
@@ -324,9 +280,7 @@ class Inpainter():
         (aX, aY), (bX, bY) = self.getPatch(targetPoint)
         bulX, bulY = self.bestMatchUpperLeft
         pHeight, pWidth = bY-aY+1, bX-aX+1
-#        for y in range(pHeight):
-#            for x in range(pWidth):
-#                if self.sourceRegion[aY+y, aX+x] == 0:
+        
         for (i, j) in self.targetPatchTList:
                     self.workImage[aY+i, aX+j] = self.workImage[bulY+i, bulX+j]
                     self.gradientX[aY+i, aX+j] = self.gradientX[bulY+i, bulX+j]
