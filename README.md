@@ -1,17 +1,17 @@
-This is the Python reimplement of [Inpaint.git](https://github.com/fooble/Inpaint.git), which implemented the algorithm of the paper:
+This repo is the Python3 version reimplement of [Inpaint.git](https://github.com/fooble/Inpaint.git), which implemented the algorithm of the paper:
 ***"Region Filling and Object Removal by Exemplar-Based Image Inpainting"** by A.Criminisi et al.*
 
-For simplifying, code for region selection with mouse and mask generation are not implemented.
+For simplifying, code for region selection with mouse and mask generation are not implemented, a binary mask image should be provided instead.
 
-You could use command: 
+The command to run the program is: 
 ```
-python main.py pathOfInputImage pathOfMaskImage [halfPatchWidth]
+python3 main.py <pathOfInputImage> <pathOfMaskImage>[ <patchHalfWidth>]
 ```
-to run the program.
+
 For example:
 ```
-python main.py ../tests/image4.jpg ../tests/mask4.jpg 4
+python3 main.py ../cases/image4.jpg ../cases/mask4.jpg 4
 ```
 
 I did some little optimize to speed up, especially the time-consuming *computeBestPatch()* function.
-Now the iteration time is about 7 sec, for image with size about 300 * 300 and halfPatchWidth = 4, on my ThinkPad laptop made in 2013.
+As a result the it takes about 7 seconds per iteration, for an about 300 * 300 sized image, and patchHalfWidth = 4 (size=9x9), on my ThinkPad laptop made in 2013.
