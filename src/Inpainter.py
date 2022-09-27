@@ -213,7 +213,7 @@ class Inpainter():
         
         for (y, x) in self.sourcePatchULList:
             patchError = 0
-            meanR = meanG = meanB = 0
+            meanB = meanG = meanR = 0
             skipPatch = False
             
             for (i, j) in self.targetPatchSList:
@@ -229,9 +229,9 @@ class Inpainter():
             
             countedNum = float(countedNum)
             patchError /= countedNum
-            meanR /= countedNum
-            meanG /= countedNum
             meanB /= countedNum
+            meanG /= countedNum
+            meanR /= countedNum
             
             alpha, beta = 0.9, 0.5
             if alpha * patchError <= minError:
@@ -239,11 +239,11 @@ class Inpainter():
                 
                 for (i, j) in self.targetPatchTList:
                     sourcePixel = self.image[y+i,x+j]
-                    difference = sourcePixel[0] - meanR
+                    difference = sourcePixel[0] - meanB
                     patchVariance += math.pow(difference, 2)
                     difference = sourcePixel[1] - meanG
                     patchVariance += math.pow(difference, 2)
-                    difference = sourcePixel[2] - meanB
+                    difference = sourcePixel[2] - meanR
                     patchVariance += math.pow(difference, 2)
                 
                 # Use alpha & Beta to encourage path with less patch variance.
